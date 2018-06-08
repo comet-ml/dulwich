@@ -62,14 +62,14 @@ if '__pypy__' not in sys.modules and not sys.platform == 'win32':
         'gevent', 'geventhttpclient', 'mock', 'setuptools>=17.1'])
 
 
-ext_modules = [
-    Extension('dulwich._objects', ['dulwich/_objects.c'],
-              include_dirs=include_dirs),
-    Extension('dulwich._pack', ['dulwich/_pack.c'],
-              include_dirs=include_dirs),
-    Extension('dulwich._diff_tree', ['dulwich/_diff_tree.c'],
-              include_dirs=include_dirs),
-]
+#ext_modules = [
+#    Extension('dulwich._objects', ['dulwich/_objects.c'],
+#              include_dirs=include_dirs),
+#    Extension('dulwich._pack', ['dulwich/_pack.c'],
+#              include_dirs=include_dirs),
+#    Extension('dulwich._diff_tree', ['dulwich/_diff_tree.c'],
+#              include_dirs=include_dirs),
+#]
 
 setup_kwargs = {}
 
@@ -126,6 +126,6 @@ setup(name='comet-git-pure',
           'Topic :: Software Development :: Version Control',
       ],
       # ext_modules=ext_modules,
-      distclass=DulwichDistribution,
+      # distclass=DulwichDistribution,
       **setup_kwargs
       )
