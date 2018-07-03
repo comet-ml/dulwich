@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # test_index.py -- Tests for the git index
 # encoding: utf-8
-# Copyright (C) 2008-2009 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2008-2009 Jelmer Vernooij <jelmer@jelmer.uk>
 #
 # Dulwich is dual-licensed under the Apache License, Version 2.0 and the GNU
 # General Public License as public by the Free Software Foundation; version 2.0
@@ -66,6 +66,25 @@ from dulwich.tests import (
 from dulwich.tests.utils import (
     setup_warning_catcher,
     )
+
+
+def can_symlink():
+    """Return whether running process can create symlinks."""
+    if sys.platform != 'win32':
+        # Platforms other than Windows should allow symlinks without issues.
+        return True
+
+    if not hasattr(os, 'symlink'):
+        # Older Python versions do not have `os.symlink` on Windows.
+        return False
+
+    test_source = tempfile.mkdtemp()
+    test_target = test_source + 'can_symlink'
+    try:
+        os.symlink(test_source, test_target)
+    except OSError:
+        return False
+    return True
 
 
 class IndexTestCase(TestCase):
@@ -444,7 +463,7 @@ class BuildIndexTests(TestCase):
             with open(filea_path, 'rb') as fh:
                 self.assertEqual(b'file a', fh.read())
 
-    @skipIf(not getattr(os, 'symlink', None), 'Requires symlink support')
+    @skipIf(not can_symlink(), 'Requires symlink support')
     def test_symlink(self):
         repo_dir = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, repo_dir)

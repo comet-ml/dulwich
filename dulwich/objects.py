@@ -1,6 +1,6 @@
 # objects.py -- Access to base git objects
 # Copyright (C) 2007 James Westby <jw+debian@jameswestby.net>
-# Copyright (C) 2008-2013 Jelmer Vernooij <jelmer@samba.org>
+# Copyright (C) 2008-2013 Jelmer Vernooij <jelmer@jelmer.uk>
 #
 # Dulwich is dual-licensed under the Apache License, Version 2.0 and the GNU
 # General Public License as public by the Free Software Foundation; version 2.0
@@ -1015,7 +1015,9 @@ class Tree(ShaFile):
                                           True):
             check_hexsha(sha, 'invalid sha %s' % sha)
             if b'/' in name or name in (b'', b'.', b'..', b'.git'):
-                raise ObjectFormatException('invalid name %s' % name)
+                raise ObjectFormatException(
+                        'invalid name %s' %
+                        name.decode('utf-8', 'replace'))
 
             if mode not in allowed_modes:
                 raise ObjectFormatException('invalid mode %06o' % mode)
