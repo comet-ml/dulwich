@@ -11,10 +11,11 @@ except ImportError:
 else:
     has_setuptools = True
 from distutils.core import Distribution
+import io
 import os
 import sys
 
-dulwich_version_string = '0.19.6'
+dulwich_version_string = '0.19.8'
 
 include_dirs = []
 # Windows MSVC support
@@ -83,15 +84,33 @@ if has_setuptools:
     setup_kwargs['test_suite'] = 'dulwich.tests.test_suite'
     setup_kwargs['tests_require'] = tests_require
 
+with io.open(os.path.join(os.path.dirname(__file__), "README.md"),
+             encoding="utf-8") as f:
+    description = f.read()
 
 setup(name='comet-git-pure',
+      description="Python Git Library",
       version=dulwich_version_string,
       license='Apachev2 or later or GPLv2',
+      keywords="git vcs",
       packages=['dulwich', 'dulwich.tests', 'dulwich.tests.compat',
                 'dulwich.contrib'],
       package_data={'': ['../docs/tutorial/*.txt']},
       # scripts=['bin/dulwich', 'bin/dul-receive-pack', 'bin/dul-upload-pack'],
       # ext_modules=ext_modules,
       # distclass=DulwichDistribution,
+      classifiers=[
+          'Development Status :: 4 - Beta',
+          'License :: OSI Approved :: Apache Software License',
+          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3.4',
+          'Programming Language :: Python :: 3.5',
+          'Programming Language :: Python :: 3.6',
+          'Programming Language :: Python :: Implementation :: CPython',
+          'Programming Language :: Python :: Implementation :: PyPy',
+          'Operating System :: POSIX',
+          'Operating System :: Microsoft :: Windows',
+          'Topic :: Software Development :: Version Control',
+      ],
       **setup_kwargs
       )
