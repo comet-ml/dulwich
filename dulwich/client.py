@@ -72,6 +72,7 @@ from dulwich.protocol import (
     extract_capability_names,
     CAPABILITY_AGENT,
     CAPABILITY_DELETE_REFS,
+    CAPABILITY_INCLUDE_TAG,
     CAPABILITY_MULTI_ACK,
     CAPABILITY_MULTI_ACK_DETAILED,
     CAPABILITY_OFS_DELTA,
@@ -144,7 +145,9 @@ COMMON_CAPABILITIES = [CAPABILITY_OFS_DELTA, CAPABILITY_SIDE_BAND_64K]
 UPLOAD_CAPABILITIES = ([CAPABILITY_THIN_PACK, CAPABILITY_MULTI_ACK,
                         CAPABILITY_MULTI_ACK_DETAILED, CAPABILITY_SHALLOW]
                        + COMMON_CAPABILITIES)
-RECEIVE_CAPABILITIES = [CAPABILITY_REPORT_STATUS] + COMMON_CAPABILITIES
+RECEIVE_CAPABILITIES = (
+    [CAPABILITY_REPORT_STATUS, CAPABILITY_DELETE_REFS]
+    + COMMON_CAPABILITIES)
 
 
 class ReportStatusParser(object):
@@ -310,13 +313,16 @@ def _read_shallow_updates(proto):
 class GitClient(object):
     """Git smart server client."""
 
-    def __init__(self, thin_packs=True, report_activity=None, quiet=False):
+    def __init__(self, thin_packs=True, report_activity=None, quiet=False,
+                 include_tags=False):
         """Create a new GitClient instance.
 
         Args:
           thin_packs: Whether or not thin packs should be retrieved
           report_activity: Optional callback for reporting transport
             activity.
+          include_tags: send annotated tags when sending the objects they point
+            to
         """
         self._report_activity = report_activity
         self._report_status_parser = None
@@ -328,6 +334,8 @@ class GitClient(object):
             self._send_capabilities.add(CAPABILITY_QUIET)
         if not thin_packs:
             self._fetch_capabilities.remove(CAPABILITY_THIN_PACK)
+        if include_tags:
+            self._fetch_capabilities.add(CAPABILITY_INCLUDE_TAG)
 
     def get_url(self, path):
         """Retrieves full url to given path.
@@ -549,7 +557,7 @@ class GitClient(object):
                 else:
                     proto.write_pkt_line(
                         old_sha1 + b' ' + new_sha1 + b' ' + refname + b'\0' +
-                        b' '.join(capabilities))
+                        b' '.join(sorted(capabilities)))
                     sent_capabilities = True
             if new_sha1 not in have and new_sha1 != ZERO_SHA:
                 want.append(new_sha1)
@@ -629,7 +637,7 @@ class GitClient(object):
         """
         assert isinstance(wants, list) and isinstance(wants[0], bytes)
         proto.write_pkt_line(COMMAND_WANT + b' ' + wants[0] + b' ' +
-                             b' '.join(capabilities) + b'\n')
+                             b' '.join(sorted(capabilities)) + b'\n')
         for want in wants[1:]:
             proto.write_pkt_line(COMMAND_WANT + b' ' + want + b'\n')
         if depth not in (0, None) or getattr(graph_walker, 'shallow', None):
@@ -639,8 +647,9 @@ class GitClient(object):
                     "depth")
             for sha in graph_walker.shallow:
                 proto.write_pkt_line(COMMAND_SHALLOW + b' ' + sha + b'\n')
-            proto.write_pkt_line(COMMAND_DEEPEN + b' ' +
-                                 str(depth).encode('ascii') + b'\n')
+            if depth is not None:
+                proto.write_pkt_line(COMMAND_DEEPEN + b' ' +
+                                     str(depth).encode('ascii') + b'\n')
             proto.write_pkt_line(None)
             if can_read is not None:
                 (new_shallow, new_unshallow) = _read_shallow_updates(proto)
@@ -1600,9 +1609,14 @@ class HttpGitClient(GitClient):
         read = BytesIO(resp.data).read
 
         resp.content_type = resp.getheader("Content-Type")
-        resp_url = resp.geturl()
-        resp.redirect_location = resp_url if resp_url != url else ''
-
+        # Check if geturl() is available (urllib3 version >= 1.23)
+        try:
+            resp_url = resp.geturl()
+        except AttributeError:
+            # get_redirect_location() is available for urllib3 >= 1.1
+            resp.redirect_location = resp.get_redirect_location()
+        else:
+            resp.redirect_location = resp_url if resp_url != url else ''
         return resp, read
 
     def _discover_references(self, service, base_url):

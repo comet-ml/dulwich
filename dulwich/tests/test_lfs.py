@@ -1,6 +1,5 @@
-# __init__.py -- The git module of dulwich
-# Copyright (C) 2007 James Westby <jw+debian@jameswestby.net>
-# Copyright (C) 2008 Jelmer Vernooij <jelmer@jelmer.uk>
+# test_lfs.py -- tests for LFS
+# Copyright (C) 2020 Jelmer Vernooij <jelmer@jelmer.uk>
 #
 # Dulwich is dual-licensed under the Apache License, Version 2.0 and the GNU
 # General Public License as public by the Free Software Foundation; version 2.0
@@ -19,7 +18,27 @@
 # License, Version 2.0.
 #
 
+"""Tests for LFS support."""
 
-"""Python implementation of the Git file formats and protocols."""
+from . import TestCase
+from ..lfs import LFSStore
+import shutil
+import tempfile
 
-__version__ = (0, 19, 16)
+
+class LFSTests(TestCase):
+
+    def setUp(self):
+        super(LFSTests, self).setUp()
+        self.test_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.test_dir)
+        self.lfs = LFSStore.create(self.test_dir)
+
+    def test_create(self):
+        sha = self.lfs.write_object([b'a', b'b'])
+        with self.lfs.open_object(sha) as f:
+            self.assertEqual(b'ab', f.read())
+
+    def test_missing(self):
+        self.assertRaises(
+            KeyError, self.lfs.open_object, 'abcdeabcdeabcdeabcde')
